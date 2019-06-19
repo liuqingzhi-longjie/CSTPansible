@@ -1,0 +1,94 @@
+---
+- name: check new application file
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  register: new_application_status
+
+- name: read new application file
+  shell: |
+      cat "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"  |grep -v grep
+  register: new_application_file
+  when: new_application_status.stat.exists
+
+
+- name: clear new application
+  block:
+    - name: stop cstp-dp-ds services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh stop
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-ds/bin/"
+      ignore_errors: true
+      when: (new_application_file.stdout.find("cstp-dp-ds/") != -1  )
+    
+    
+    - name: delete cstp-dp-ds directory
+      file:
+        path: "{{ansible_env.HOME}}/app/cstp-dp-ds"
+        state: absent
+      when: (new_application_file.stdout.find("cstp-dp-ds/") != -1  )
+  when: new_application_status.stat.exists
+
+- name: check cstp-dp-ds {{version}} backup
+  stat: 
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-ds.tgz"
+  register: cstp_dp_ds_backup
+
+- name: start rollback cstp-dp-ds
+  block:
+
+
+    - name: stop cstp-dp-ds services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh stop
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-ds/bin/"
+      ignore_errors: true
+    
+    
+        
+    - name: delete cstp-dp-ds directory
+      shell: |
+        find {{ansible_env.HOME}}/app/cstp-dp-ds/*  -maxdepth 0  ! -path '{{ansible_env.HOME}}/app/cstp-dp-ds/logs*'  -exec     rm -rf {} \;
+      ignore_errors: true
+
+
+    
+    
+    
+    - name: rollback cstp-dp-ds app
+      unarchive:
+        src: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-ds.tgz"
+        dest: "{{ansible_env.HOME}}/app/"
+        remote_src: yes
+        mode: 0755
+
+    
+    
+    - name: start cstp-dp-ds services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh start
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-ds/bin/"
+    
+    - name: wait service start
+      wait_for:
+        timeout: 10
+    
+    - name: check cstp-dp-ds services
+      shell: |
+        ps -ef | grep RMBCSTP_CSTP_DS
+      register: cstp_dp_ds_services
+    
+    - name: show cstp-dp-ds services status
+      debug:
+        msg: "{{cstp_dp_ds_services.stdout_lines}}"
+    
+    
+  when: cstp_dp_ds_backup.stat.exists

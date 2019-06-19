@@ -1,0 +1,94 @@
+---
+- name: create {{version}}  backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+    state: directory
+
+
+- name: stop cstp-dp-dsbccl services
+  shell: |
+    source ~/.bash_profile;
+    set -m; sh ./app.sh stop
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/app/cstp-dp-dsbccl/bin/"
+  ignore_errors: true
+
+
+- name: check cstp-dp-dsbccl app
+  stat:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-dsbccl"
+  register: cstp_dp_dsbccl_status
+
+- name: check cstp-dp-dsbccl backup
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-dsbccl_{{version}}"
+  register: cstp_dp_dsbccl_backup_status
+
+
+- name: backup cstp-dp-dsbccl
+  shell: |
+
+    tar -czf {{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-dsbccl.tgz  cstp-dp-dsbccl --exclude=cstp-dp-dsbccl/logs/*
+    touch {{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-dsbccl_{{version}}
+  args:
+    chdir: "{{ansible_env.HOME}}/app/"
+  when: (cstp_dp_dsbccl_status.stat.exists) and (cstp_dp_dsbccl_backup_status.stat.exists == False)
+
+
+- name: save new app name
+  shell: |
+    echo -e "cstp-dp-dsbccl/ \n" >> "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  when: cstp_dp_dsbccl_status.stat.exists == False
+
+- name: create cstp-dp-dsbccl directory
+  file:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-dsbccl"
+    state: directory
+
+
+- name: rm CSTP_DP_DSBCCL old file
+  file:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-dsbccl/{{item}}"
+    state: absent
+  with_items:
+      - conf
+      - lib
+
+
+
+- name: update cstp-dp-dsbccl app
+  shell: |
+    cp -r  {{version_dir}}/{{version}}/app/cstp-dp-dsbccl  {{ansible_env.HOME}}/app/
+
+
+- name: unix2dos config
+  shell: |
+     unix2dos ./*
+  args:
+    chdir: "{{ansible_env.HOME}}/app/cstp-dp-dsbccl/conf/"
+
+
+
+- name: start cstp-dp-dsbccl services
+  shell: |
+    source ~/.bash_profile;
+    set -m; sh ./app.sh start
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/app/cstp-dp-dsbccl/bin/"
+
+- name: wait service start
+  wait_for:
+    timeout: 10
+
+- name: check cstp-dp-dsbccl services
+  shell: |
+    ps -ef | grep RMBCSTP_BCCL_DS |grep -iv grep 
+  register: cstp_dp_dsbccl_services
+
+- name: show cstp-dp-dsbccl services status
+  debug:
+    msg: "{{cstp_dp_dsbccl_services.stdout_lines}}"
+
+

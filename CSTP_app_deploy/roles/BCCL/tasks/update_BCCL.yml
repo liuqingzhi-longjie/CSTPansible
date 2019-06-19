@@ -1,0 +1,76 @@
+---
+- name: create {{version}}  backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+    state: directory
+
+
+- name: stop ApacheTomcat7_BCCL services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./shutdown.sh
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL/bin/"
+  ignore_errors: true
+
+- name: check ApacheTomcat7_BCCL app
+  stat:
+    path: "{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL"
+  register: bccl_status
+
+- name: check ApacheTomcat7_BCCL backup
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_BCCL_{{version}}"
+  register: bccl_backup_status
+
+
+- name: backup ApacheTomcat7_BCCL
+  shell: |
+
+    tar -czf {{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_BCCL.tgz  ApacheTomcat7_BCCL --exclude=ApacheTomcat7_BCCL/logs/*.log --exclude=ApacheTomcat7_BCCL/logs/*.txt 
+    touch {{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_BCCL_{{version}}
+
+  args:
+    chdir: "{{ansible_env.HOME}}/Server/"
+
+  when: (bccl_status.stat.exists) and (bccl_backup_status.stat.exists == False)
+
+- name: save new app name
+  shell: |
+    echo -e "ApacheTomcat7_BCCL/ \n">>"{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  when: bccl_status.stat.exists == False
+
+- name: create ApacheTomcat7_BCCL directory
+  file:
+    path: "{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL"
+    state: directory
+
+- name: update ApacheTomcat7_BCCL app
+  shell: |
+    cp -r  {{version_dir}}/{{version}}/Server/ApacheTomcat7_BCCL  {{ansible_env.HOME}}/Server/
+
+
+
+- name: start ApacheTomcat7_BCCL services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./startup.sh
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL/bin/"
+
+- name: wait service start
+  wait_for:
+    timeout: 10
+
+- name: check ApacheTomcat7_BCCL services
+  shell: |
+    ps -ef | grep ApacheTomcat7_BCCL
+  register: BCCL_services
+
+- name: show ApacheTomcat7_BCCL services status
+  debug:
+    msg: "{{BCCL_services.stdout_lines}}"
+
+

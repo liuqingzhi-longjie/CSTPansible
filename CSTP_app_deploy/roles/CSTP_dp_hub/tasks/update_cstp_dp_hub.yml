@@ -1,0 +1,96 @@
+---
+- name: create {{version}}  backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+    state: directory
+
+
+- name: stop cstp-dp-hub services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh stop
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/app/cstp-dp-hub/bin/"
+  ignore_errors: true
+
+
+- name: check cstp-dp-hub app
+  stat:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-hub"
+  register: cstp_dp_hub_status
+
+- name: check cstp-dp-hub backup
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-hub_{{version}}"
+  register: cstp_dp_hub_backup_status
+
+
+- name: backup cstp-dp-hub
+  shell: |
+
+    tar -czf {{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-hub.tgz  cstp-dp-hub --exclude=cstp-dp-hub/logs/*
+    touch {{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-hub_{{version}}
+
+  args:
+    chdir: "{{ansible_env.HOME}}/app/"
+  when: (cstp_dp_hub_status.stat.exists) and (cstp_dp_hub_backup_status.stat.exists == False)
+
+- name: save new app name
+  shell: |
+    echo -e "cstp-dp-hub/ \n" >> "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  when: cstp_dp_hub_status.stat.exists == False
+
+- name: create cstp-dp-hub directory
+  file:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-hub"
+    state: directory
+
+- name: rm cstp_dp_hub old file
+  file:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-hub/{{item}}"
+    state: absent
+  with_items:
+      - conf
+      - lib
+
+
+
+
+
+- name: update cstp-dp-hub app
+  shell: |
+    cp -r {{version_dir}}/{{version}}/app/cstp-dp-hub   {{ansible_env.HOME}}/app/
+
+
+- name: unix2dos config
+  shell: |
+     unix2dos ./*
+  args:
+    chdir: "{{ansible_env.HOME}}/app/cstp-dp-hub/conf/"
+
+
+
+
+- name: start cstp-dp-hub services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh start
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/app/cstp-dp-hub/bin/"
+
+- name: wait service start
+  wait_for:
+    timeout: 10
+
+- name: check cstp-dp-hub services
+  shell: |
+    ps -ef | grep RMBCSTP_HUB |grep -iv grep 
+  register: cstp_dp_hub_services
+
+- name: show cstp-dp-hub services status
+  debug:
+    msg: "{{cstp_dp_hub_services.stdout_lines}}"
+
+

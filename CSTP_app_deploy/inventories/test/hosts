@@ -1,0 +1,54 @@
+[CSTP]
+200.31.147.95
+200.31.147.96
+
+[BCCL]
+200.31.147.95
+200.31.147.96
+
+
+
+[CSTP_PROCESSOR]
+200.31.147.95
+200.31.147.96
+
+
+[CSTP_REPORT]
+200.31.147.95   slave=master
+200.31.147.96   slave=slave
+
+[EXCHANGE_REPORT]
+200.31.147.95    slave=master
+200.31.147.96    slave=slave
+
+
+[IMIXCSTP]
+200.31.147.95
+200.31.147.96
+
+
+[CSTP_DOWNLOAD_SERVER]
+200.31.147.95  slave=slave
+200.31.147.96  slave=master
+
+[CSTP_DP_DS]
+200.31.147.95
+200.31.147.96
+
+
+[CSTP_DP_DSBCCL]
+200.31.147.95
+200.31.147.96
+
+[CSTP_DP_EMERGENCY]
+200.31.147.95  slave=slave
+200.31.147.96  slave=slave
+
+
+
+[DB]
+200.31.147.95
+
+
+[all:vars]
+ansible_ssh_user=cstp

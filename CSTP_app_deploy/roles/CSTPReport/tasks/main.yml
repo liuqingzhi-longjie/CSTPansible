@@ -1,0 +1,8 @@
+---
+- name: check deploy file 
+  stat: 
+    path: "{{version_dir}}/{{version}}/Report/CSTPReport"
+  register: CSTPReport_file
+
+- import_tasks: update_CSTPReport.yml
+  when: (CSTPReport_file.stat.exists) and (inventory_hostname in groups['CSTP_REPORT'])

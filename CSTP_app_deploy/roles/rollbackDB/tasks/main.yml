@@ -1,0 +1,29 @@
+---
+- name: check current version file
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/current_version"
+  register: current_version_file
+
+
+- name: init current version file
+  shell: |
+    echo "{{init_version}}" > current_version
+  args:
+    chdir: "{{ansible_env.HOME}}/upgrade/"
+  when: current_version_file.stat.exists == False
+
+
+- name: read current version
+  shell: |
+    cat current_version
+  args:
+    chdir: "{{ansible_env.HOME}}/upgrade/"
+  register: current_version
+
+- name: check update DB file 
+  stat: 
+    path: "{{ansible_env.HOME}}/upgrade/{{current_version.stdout}}/rollbackDB/rollbackDB.sh"
+  register: rollbackDB_file
+
+- import_tasks: rollback_DB.yml
+  when: (rollbackDB_file.stat.exists) and (inventory_hostname in groups['DB'])

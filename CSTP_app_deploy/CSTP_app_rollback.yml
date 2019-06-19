@@ -1,0 +1,7 @@
+- hosts: all
+  any_errors_fatal: true
+
+  roles:
+    - check_env
+    - rollbackDB
+    - rollback_CSTP_app

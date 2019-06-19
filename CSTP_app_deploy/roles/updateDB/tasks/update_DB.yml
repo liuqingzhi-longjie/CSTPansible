@@ -1,0 +1,88 @@
+---
+- name: create upgrade directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade"
+    state: directory
+
+- name: check current version file
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/current_version"
+  register: current_version_file
+
+
+- name: init current version file
+  shell: |
+    echo "{{init_version}}" > current_version
+  args:
+    chdir: "{{ansible_env.HOME}}/upgrade/"
+  when: current_version_file.stat.exists == False
+
+
+- name: read current version
+  shell: |
+    cat current_version
+  args:
+    chdir: "{{ansible_env.HOME}}/upgrade/"
+  register: current_version
+
+
+
+
+- name: create {{current_version.stdout}}  backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{current_version.stdout}}/rollbackDB"
+    state: directory
+
+
+
+- name: rm old updateDB directory
+  file:
+      path: "{{version_dir}}/upgrade/DATABASE"
+      state: absent
+
+
+- name: create updateDB directory
+  file:
+    path: "{{version_dir}}/upgrade/DATABASE"
+    state: directory
+
+
+- name: copy updateDB scripts
+  copy:
+    src: "{{version_dir}}/DATABASE/{{version}}"
+    dest: "{{ansible_env.HOME}}/upgrade/DATABASE/"
+    mode: 0755
+
+
+- name: update updateDB scripts config
+  lineinfile:
+    path: "{{ansible_env.HOME}}/upgrade/DATABASE/{{version}}/updateDB.sh"
+    regexp: "{{item.key}}"
+    line: "{{item.value}}"
+  with_items:
+      - {key: user,value: "{{CSTPDBuser}}"}
+      - {key: password,value: "{{CSTPDBpassword}}"}
+
+
+
+
+- name: start updateDB scripts
+  shell: |
+
+    set -m;sh updateDB.sh
+  args:
+    chdir: "{{ansible_env.HOME}}/upgrade/DATABASE/{{version}}/"
+  run_once: yes
+
+- name: update rollbackDB scripts config
+  lineinfile:
+    path: "{{ansible_env.HOME}}/upgrade/DATABASE/{{version}}/rollbackDB/rollbackDB.sh"
+    regexp: "{{item.key}}"
+    line: "{{item.value}}"
+  with_items:
+      - {key: user,value: "{{CSTPDBuser}}"}
+      - {key: password,value: "{{CSTPDBpassword}}"}
+
+- name: copy rollback scripts
+  shell:
+    cp -r "{{ansible_env.HOME}}/upgrade/DATABASE/{{version}}/*"   "{{ansible_env.HOME}}/upgrade/backup/{{current_version.stdout}}/rollbackDB/"

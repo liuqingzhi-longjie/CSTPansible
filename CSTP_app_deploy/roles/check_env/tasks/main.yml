@@ -1,0 +1,12 @@
+---
+- name: check hardware size
+  shell: df -hPm|grep /home$ |awk '{print$4}'
+  register: disk_size
+
+- debug:
+    msg: " Disk space '/home' is {{disk_size.stdout}}M !"
+
+- name: Disk Check Pass!
+  fail:
+   msg: " Disk space '/home' is {{disk_size.stdout}}M , Disk is not Enough!"
+  when: disk_size.stdout|int < 400

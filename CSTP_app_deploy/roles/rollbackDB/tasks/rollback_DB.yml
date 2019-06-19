@@ -1,0 +1,8 @@
+---
+- name: start rollbackDB scripts
+  shell: |
+    source ~/.bash_profile;
+    set -m;sh rollbackDB.sh
+  args:
+    chdir: "{{ansible_env.HOME}}/upgrade/backup/{{current_version.stdout}}/rollbackDB/"
+  run_once: yes

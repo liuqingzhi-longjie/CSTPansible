@@ -1,0 +1,89 @@
+---
+- name: check new application file
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  register: new_application_status
+
+- name: read new application file
+  shell: |
+      cat "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"  |grep -v grep
+  register: new_application_file
+  when: new_application_status.stat.exists
+
+
+- name: clear new application
+  block:
+    - name: stop BCCL services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./shutdown.sh
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL/bin/"
+      ignore_errors: true
+      when: (new_application_file.stdout.find("ApacheTomcat7_BCCL/") != -1  )
+
+    - name: delete ApacheTomcat7_BCCL directory
+      file:
+        path: "{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL"
+        state: absent
+      when: (new_application_file.stdout.find("ApacheTomcat7_BCCL/") != -1  )
+  when: new_application_status.stat.exists
+
+- name: check ApacheTomcat7_BCCL {{version}} backup
+  stat: 
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_BCCL.tgz"
+  register: BCCL_backup
+
+- name: start rollback ApacheTomcat7_BCCL
+  block:
+    - name: stop BCCL services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./shutdown.sh
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL/bin/"
+      ignore_errors: true
+
+
+    
+    - name: delete ApacheTomcat7_BCCL directory
+      shell: |
+        find {{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL/*  -maxdepth 0  ! -path '{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL/logs*'  -exec     rm -rf {} \;
+      ignore_errors: true
+    
+    
+    
+    - name: rollback ApacheTomcat7_BCCL app
+      unarchive:
+        src: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_BCCL.tgz"
+        dest: "{{ansible_env.HOME}}/Server/"
+        remote_src: yes
+        mode: 0755
+
+    
+    - name: start ApacheTomcat7_BCCL services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./startup.sh
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Server/ApacheTomcat7_BCCL/bin/"
+    
+    - name: wait service start
+      wait_for:
+        timeout: 10
+    
+    - name: check ApacheTomcat7_BCCL services
+      shell: |
+        ps -ef | grep ApacheTomcat7_BCCL
+      register: BCCL_services
+    
+    - name: show ApacheTomcat7_BCCL services status
+      debug:
+        msg: "{{BCCL_services.stdout_lines}}"
+    
+  
+  when: BCCL_backup.stat.exists
+

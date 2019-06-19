@@ -1,0 +1,9 @@
+---
+- name: update MachineMonitorAgent hub_agents config
+  replace:
+    path: "{{ansible_env.HOME}}/imixapp/Monitor/MachineMonitorAgent/cfg/hub_agents.cfg"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{MachineMonitorAgent.hub_agents}}"
+

@@ -1,0 +1,96 @@
+---
+- name: create {{version}}  backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+    state: directory
+
+
+- name: stop cstp-dp-irs services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh stop
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/app/cstp-dp-irs/bin/"
+  ignore_errors: true
+
+
+- name: check cstp-dp-irs app
+  stat:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-irs"
+  register: cstp_dp_irs_status
+
+- name: check cstp-dp-irs backup
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-irs_{{version}}"
+  register: cstp_dp_irs_backup_status
+
+
+- name: backup cstp-dp-irs
+  shell: |
+
+    tar -czf {{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-irs.tgz  cstp-dp-irs --exclude=cstp-dp-irs/logs/*
+    touch {{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-irs_{{version}}
+
+  args:
+    chdir: "{{ansible_env.HOME}}/app/"
+  when: (cstp_dp_irs_status.stat.exists) and (cstp_dp_irs_backup_status.stat.exists == False)
+
+- name: save new app name
+  shell: |
+    echo -e "cstp-dp-irs/ \n" >> "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  when: cstp_dp_irs_status.stat.exists == False
+
+- name: create cstp-dp-irs directory
+  file:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-irs"
+    state: directory
+
+- name: rm cstp_dp_irs old file
+  file:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-irs/{{item}}"
+    state: absent
+  with_items:
+      - conf
+      - lib
+
+
+
+
+
+- name: update cstp-dp-irs app
+  shell: |
+    cp -r {{version_dir}}/{{version}}/app/cstp-dp-irs   {{ansible_env.HOME}}/app/
+
+
+- name: unix2dos config
+  shell: |
+     unix2dos ./*
+  args:
+    chdir: "{{ansible_env.HOME}}/app/cstp-dp-irs/conf/"
+
+
+
+
+- name: start cstp-dp-irs services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh start
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/app/cstp-dp-irs/bin/"
+
+- name: wait service start
+  wait_for:
+    timeout: 10
+
+- name: check cstp-dp-irs services
+  shell: |
+    ps -ef | grep RMBCSTP_IMIX_IRS |grep -iv grep 
+  register: cstp_dp_irs_services
+
+- name: show cstp-dp-irs services status
+  debug:
+    msg: "{{cstp_dp_irs_services.stdout_lines}}"
+
+

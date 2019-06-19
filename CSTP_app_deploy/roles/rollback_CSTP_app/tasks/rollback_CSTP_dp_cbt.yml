@@ -1,0 +1,94 @@
+---
+- name: check new application file
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  register: new_application_status
+
+- name: read new application file
+  shell: |
+      cat "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"  |grep -v grep
+  register: new_application_file
+  when: new_application_status.stat.exists
+
+
+- name: clear new application
+  block:
+    - name: stop cstp-dp-cbt services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh stop
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-cbt/bin/"
+      ignore_errors: true
+      when: (new_application_file.stdout.find("cstp-dp-cbt/") != -1  )
+    
+    
+    - name: delete cstp-dp-cbt directory
+      file:
+        path: "{{ansible_env.HOME}}/app/cstp-dp-cbt"
+        state: absent
+      when: (new_application_file.stdout.find("cstp-dp-cbt/") != -1  )
+  when: new_application_status.stat.exists
+
+- name: check cstp-dp-cbt {{version}} backup
+  stat: 
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-cbt.tgz"
+  register: cstp_dp_cbt_backup
+
+- name: start rollback cstp-dp-cbt
+  block:
+
+
+    - name: stop cstp-dp-cbt services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh stop
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-cbt/bin/"
+      ignore_errors: true
+    
+    
+        
+    - name: delete cstp-dp-cbt directory
+      shell: |
+        find {{ansible_env.HOME}}/app/cstp-dp-cbt/*  -maxdepth 0  ! -path '{{ansible_env.HOME}}/app/cstp-dp-cbt/logs*'  -exec     rm -rf {} \;
+      ignore_errors: true
+
+
+    
+    
+    
+    - name: rollback cstp-dp-cbt app
+      unarchive:
+        src: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-cbt.tgz"
+        dest: "{{ansible_env.HOME}}/app/"
+        remote_src: yes
+        mode: 0755
+
+    
+    
+    - name: start cstp-dp-cbt services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh start
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-cbt/bin/"
+    
+    - name: wait service start
+      wait_for:
+        timeout: 10
+    
+    - name: check cstp-dp-cbt services
+      shell: |
+        ps -ef | grep RMBCSTP_IMIX_CBT
+      register: cstp_dp_cbt_services
+    
+    - name: show cstp-dp-cbt services status
+      debug:
+        msg: "{{cstp_dp_cbt_services.stdout_lines}}"
+    
+    
+  when: cstp_dp_cbt_backup.stat.exists

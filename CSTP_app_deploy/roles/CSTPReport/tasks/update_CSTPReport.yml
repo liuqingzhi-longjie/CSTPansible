@@ -1,0 +1,130 @@
+---
+- name: create {{version}} backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+    state: directory
+
+- name: stop Report services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh stop
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/Report/CSTPReport/"
+  ignore_errors: true
+
+
+- name: check  CSTPReport app
+  stat:
+    path: "{{ansible_env.HOME}}/Report/CSTPReport"
+  register: cstpreport_status
+
+- name: check CSTPReport backup
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/CSTPReport_{{version}}"
+  register: cstpreport_backup_status
+
+
+- name: backup CSTPReport
+  shell: |
+
+    tar -czf {{ansible_env.HOME}}/upgrade/backup/{{version}}/CSTPReport.tgz  CSTPReport --exclude=CSTPReport/Log/*
+    touch {{ansible_env.HOME}}/upgrade/backup/{{version}}/CSTPReport_{{version}}
+  args:
+    chdir: "{{ansible_env.HOME}}/Report/"
+  when: (cstpreport_status.stat.exists) and (cstpreport_backup_status.stat.exists == False)
+
+
+- name: save new app name
+  shell: |
+    echo -e "CSTPReport/ \n" >> "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  when: cstpreport_status.stat.exists == False
+
+- name: create CSTPReport directory
+  file:
+    path: "{{ansible_env.HOME}}/Report/CSTPReport"
+    state: directory
+
+
+- name: rm CSTPReport old file
+  file:
+    path: "{{ansible_env.HOME}}/Report/CSTPReport/{{item}}"
+    state: absent
+  with_items:
+      - cfg
+      - lib
+
+
+
+- name: update CSTPReport app
+  shell: |
+    cp -r  {{version_dir}}/{{version}}/Report/CSTPReport  {{ansible_env.HOME}}/Report/
+
+
+
+#- name: update CSTPReport database_current config
+#  replace:
+#    path: "{{ansible_env.HOME}}/Report/CSTPReport/cfg/database_current.properties"
+#    regexp: "^{{item.key}}.*"
+#    replace: "{{item.key}}={{item.value}}"
+#  with_items:
+#      - "{{CSTPReport_conf.database_current}}"
+#
+#- name: update CSTPReport database_current ETLUSERDBpassword config
+#  replace:
+#    path: "{{ansible_env.HOME}}/Report/CSTPReport/cfg/database_current.properties"
+#    regexp: "^jdbc.password.*"
+#    replace: "jdbc.password={{ETLUSERDBpassword}}"
+
+
+
+- name: update CSTPReport database_history config
+  replace:
+    path: "{{ansible_env.HOME}}/Report/CSTPReport/cfg/database_history.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{CSTPReport_conf.database_history}}"
+
+
+- name: update CSTPReport database_history DWUSERDBpassword config
+  replace:
+    path: "{{ansible_env.HOME}}/Report/CSTPReport/cfg/database_history.properties"
+    regexp: "^jdbc.password.*"
+    replace: "jdbc.password={{DWUSERDBpassword}}"
+
+
+- name: unix2dos config
+  shell: |
+     unix2dos ./*
+  args:
+    chdir: "{{ansible_env.HOME}}/Report/CSTPReport/cfg/"
+
+
+
+- name: start CSTPReport services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh start
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/Report/CSTPReport/"
+  when: slave == 'master'
+
+- name: wait service start
+  wait_for:
+    timeout: 10
+  when: slave == 'master'
+
+- name: check CSTPReport services
+  shell: |
+    ps -ef | grep CSTP_Report_CSTP|grep -vi grep
+  register: CSTPReport_services
+  when: slave == 'master'
+
+- name: show CSTPReport services status
+  debug:
+    msg: "{{CSTPReport_services.stdout_lines}}"
+  when: slave == 'master'
+
+

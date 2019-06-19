@@ -1,0 +1,8 @@
+---
+- name: check deploy file 
+  stat: 
+    path: "{{version_dir}}/{{version}}/Server/ApacheTomcat7_CSTP"
+  register: CSTP_file
+
+- import_tasks: update_CSTP.yml
+  when: (CSTP_file.stat.exists) and (inventory_hostname in groups['CSTP'])

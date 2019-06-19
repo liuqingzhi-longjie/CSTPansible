@@ -1,0 +1,102 @@
+---
+- name: check new application file
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  register: new_application_status
+
+- name: read new application file
+  shell: |
+      cat "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"  |grep -v grep
+  register: new_application_file
+  when: new_application_status.stat.exists
+
+
+- name: clear new application
+  block:
+    - name: stop EXCHANGEReport services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh stop
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Report/EXCHANGEReport/"
+      ignore_errors: true
+      when: (new_application_file.stdout.find("EXCHANGEReport/") != -1  )
+    
+    
+    
+    
+    - name: delete EXCHANGEReport directory
+      file:
+        path: "{{ansible_env.HOME}}/Report/EXCHANGEReport"
+        state: absent
+      when: (new_application_file.stdout.find("EXCHANGEReport/") != -1  )
+  when: new_application_status.stat.exists
+
+- name: check EXCHANGEReport {{version}} backup
+  stat: 
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/EXCHANGEReport.tgz"
+  register: EXCHANGEReport_backup
+
+
+
+
+- name: start rollback EXCHANGEReport
+  block:
+    - name: stop EXCHANGEReport services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh stop
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Report/EXCHANGEReport/"
+      ignore_errors: true
+    
+    
+    
+        
+    
+    - name: delete EXCHANGEReport directory
+      shell: |
+        find {{ansible_env.HOME}}/Report/EXCHANGEReport/*  -maxdepth 0  ! -path '{{ansible_env.HOME}}/Report/EXCHANGEReport/Log*'  -exec     rm -rf {} \;
+      ignore_errors: true
+
+
+    
+    
+    - name: rollback EXCHANGEReport app
+      unarchive:
+        src: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/EXCHANGEReport.tgz"
+        dest: "{{ansible_env.HOME}}/Report/"
+        remote_src: yes
+        mode: 0755
+
+    
+
+
+
+    - name: start EXCHANGEReport services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh start
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Report/EXCHANGEReport/"
+    
+    - name: wait service start
+      wait_for:
+        timeout: 10
+    
+    - name: check EXCHANGEReport services
+      shell: |
+        ps -ef | grep CSTP_REPORT_PTRD
+      register: EXCHANGEReport_services
+    
+    - name: show EXCHANGEReport services status
+      debug:
+        msg: "{{EXCHANGEReport_services.stdout_lines}}"
+    
+    
+    
+  when: EXCHANGEReport_backup.stat.exists
+

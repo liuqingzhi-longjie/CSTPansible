@@ -1,0 +1,96 @@
+---
+- name: create {{version}}  backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+    state: directory
+
+
+- name: stop cstp-dp-cbt services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh stop
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/app/cstp-dp-cbt/bin/"
+  ignore_errors: true
+
+
+- name: check cstp-dp-cbt app
+  stat:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-cbt"
+  register: cstp_dp_cbt_status
+
+- name: check cstp-dp-cbt backup
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-cbt_{{version}}"
+  register: cstp_dp_cbt_backup_status
+
+
+- name: backup cstp-dp-cbt
+  shell: |
+
+    tar -czf {{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-cbt.tgz  cstp-dp-cbt --exclude=cstp-dp-cbt/logs/*
+    touch {{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-cbt_{{version}}
+
+  args:
+    chdir: "{{ansible_env.HOME}}/app/"
+  when: (cstp_dp_cbt_status.stat.exists) and (cstp_dp_cbt_backup_status.stat.exists == False)
+
+- name: save new app name
+  shell: |
+    echo -e "cstp-dp-cbt/ \n" >> "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  when: cstp_dp_cbt_status.stat.exists == False
+
+- name: create cstp-dp-cbt directory
+  file:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-cbt"
+    state: directory
+
+- name: rm CSTP_DP_CBT old file
+  file:
+    path: "{{ansible_env.HOME}}/app/cstp-dp-cbt/{{item}}"
+    state: absent
+  with_items:
+      - conf
+      - lib
+
+
+
+
+
+- name: update cstp-dp-cbt app
+  shell: |
+    cp -r {{version_dir}}/{{version}}/app/cstp-dp-cbt   {{ansible_env.HOME}}/app/
+
+
+- name: unix2dos config
+  shell: |
+     unix2dos ./*
+  args:
+    chdir: "{{ansible_env.HOME}}/app/cstp-dp-cbt/conf/"
+
+
+
+
+- name: start cstp-dp-cbt services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh start
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/app/cstp-dp-cbt/bin/"
+
+- name: wait service start
+  wait_for:
+    timeout: 10
+
+- name: check cstp-dp-cbt services
+  shell: |
+    ps -ef | grep RMBCSTP_IMIX_CBT |grep -iv grep 
+  register: cstp_dp_cbt_services
+
+- name: show cstp-dp-cbt services status
+  debug:
+    msg: "{{cstp_dp_cbt_services.stdout_lines}}"
+
+

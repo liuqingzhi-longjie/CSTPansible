@@ -1,0 +1,156 @@
+---
+version:
+init_version: 1.0.0.0
+version_dir: ~/upgrade/deploy_file/
+
+CSTPDBuser:
+CSTPDBpassword:
+ETLUSERDBpassword:
+DWUSERDBpassword:
+CSTP_OF_encrypt:
+CSTP_OF_encrypt_pass:
+
+
+BCCL_conf:
+
+
+CSTP_conf:
+
+
+CSTP_Download_Server_conf:
+     downloadServerRMI: 
+         -  {key: 'serviceIP', value: "{{inventory_hostname}}"}
+         -  {key: 'Servername', value: "{{inventory_hostname}}"}
+         -  {key: 'Port', value: '9650'}
+     hibernate:
+         -  {key: 'hibernate.connection.url', value: 'jdbc:oracle:thin:@199.31.178.46:1521:RMBTBDB'}
+         -  {key: 'hibernate.connection.username', value: 'cstp'}
+#         -  {key: 'hibernate.connection.password', value: "{{CSTPDBpassword}}"}
+     InstInfo:
+         -  {key: 'app', value: 'https\://199.31.191.15\:443/tradeload/download/'}
+     jmxserver_config:
+         -  {key: 'run.agent.names', value: 'CstpAgent'}
+         -  {key: 'CstpAgent.rmi.port', value: '9963'}
+         -  {key: 'CstpAgent.html.port', value: '9964'}
+
+
+cstp_dp_ds_conf:
+     
+
+cstp_dp_dsbccl_conf:
+
+
+cstp_dp_emergency_conf:
+    rmi:
+         -  {key: 'rmi.initiator1.host', value: 'app02.cstp.com'}
+         -  {key: 'rmi.initiator1.port', value: '9555'}
+         -  {key: 'rmi.initiator1.interface', value: 'com.cfets.cfib.fxcstp.u.rmi.service.MscInvokeProcessorService'}
+         -  {key: 'rmi.initiator2.host', value: 'app01.cstp.com'}
+         -  {key: 'rmi.initiator2.port', value: '9555'}
+         -  {key: 'rmi.initiator2.interface', value: 'com.cfets.cfib.fxcstp.u.rmi.service.MscInvokeProcessorService'}
+
+    
+
+
+
+
+
+CSTP_PROCESSOR_conf:
+    cwap_context:
+         -  {key: 'cstp.switch.server.repeat.interval', value: '10'}
+         -  {key: 'cstp.nas.disk.path', value: '/home/cstp/disk3/NASDisk1'}
+         -  {key: 'cstp.process.master.hooks', value: 'cstp-u-cmw,cstp-u-imtemergency-rmb,cstp-u-rmi'}
+         -  {key: 'cstp.process.hooks', value: 'cstp-s-processor'}
+         -  {key: 'cstp.imt.application.cfg.path', value: './cfg/imt_application.cfg'}
+         -  {key: 'cstp.imt.emergency.cfg', value: './cfg/imt_emergency.xml'}
+         -  {key: 'cstp.rmi.cfg.path', value: './cfg/rmi.properties'}
+    imt_emergency:
+         -  {key: 'ftp', value: 'ftp://199.31.187.110:1250'}
+    rmi:
+         -  {key: 'rmi.acceptor1.port', value: '9555'}
+         -  {key: 'rmi.acceptor1.data.port', value: '9556'}
+         -  {key: 'rmi.acceptor1.class', value: 'com.cfets.cfib.fxcstp.u.imt.emergency.service.impl.ImtEmergencyServiceImpl'}
+
+
+
+CSTPReport_conf:
+    database_current:
+         -  {key: 'jdbc.url', value: 'jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=199.31.178.46)(PORT=1521))(CONNECT_DATA=(SERVER=dedicated)(SERVICE_NAME=RMBTBDB)))'}
+         -  {key: 'jdbc.username', value: 'etluser'}
+#         -  {key: 'jdbc.password', value: "{{ETLUSERDBpassword}}"}
+    database_history:
+         -  {key: 'jdbc.url', value: 'jdbc:oracle:thin:@(DESCRIPTION=(LOAD_BALANCE=yes)(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=199.31.178.72)(PORT=1522))(ADDRESS=(PROTOCOL=TCP)(HOST=199.31.178.74)(PORT=1522)))(CONNECT_DATA=(SERVER=dedicated)(SERVICE_NAME=rmbthdb)))'}
+         -  {key: 'jdbc.username', value: 'dwuser'}
+#         -  {key: 'jdbc.password', value: "{{DWUSERDBpassword}}"}
+
+
+EXCHANGEReport_conf:
+    database_current:
+         -  {key: 'jdbc.url', value: 'jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=199.31.178.46)(PORT=1521))(CONNECT_DATA=(SERVER=dedicated)(SERVICE_NAME=RMBTBDB)))'}
+         -  {key: 'jdbc.username', value: 'cstp'}
+#         -  {key: 'jdbc.password', value: "{{CSTPDBpassword}}"}
+    rmi:
+         -  {key: 'ip', value: "{{inventory_hostname}}"}
+         -  {key: 'port', value: '9650'}
+
+
+IMIXCSTP_conf:
+    cwap_context:
+         -  {key: 'cstp.switch.server.repeat.interval', value: '10'}
+         -  {key: 'cstp.msg.process.pool.size', value: '20'}
+         -  {key: 'cstp.msg.store.change.day.timer', value: '0 0 5 * * ?'}
+         -  {key: 'cstp.msg.store.repeat.day.timer', value: '0 0 18 * * ?'}
+         -  {key: 'cstp.msg.process.repeatpool.size', value: '3'}
+         -  {key: 'cstp.msg.store.hold.day.interval', value: '10'}
+         -  {key: 'cstp.nas.disk.path', value: '/home/cstp/disk3/NASDisk'}
+         -  {key: 'cstp.process.master.hooks', value: 'cstp-imix-store,cstp-u-imt,cstp-u-imix'}
+         -  {key: 'cstp.process.hooks', value: 'cstp-s-processor'}
+    jmxserver_config:
+         -  {key: 'run.agent.names', value: 'CstpAgent'}
+         -  {key: 'CstpAgent.rmi.port', value: '9961'}
+         -  {key: 'CstpAgent.html.port', value: '9962'}
+
+MachineMonitorAgent:
+    hub_agents:
+         -  {key: 'CSTP1.ApplicationName', value: 'IMIXCSTP'}
+         -  {key: 'CSTP1.ApplicationPath', value: '/home/cstp/imixapp/IMIXCSTP'}
+         -  {key: 'CSTP1.ConfigFilePath', value: '/home/cstp/imixapp/IMIXCSTP/cfg/CSTP.xml'}
+         -  {key: 'CSTP1.ConfigFileEncoding', value: 'GBK'}
+         -  {key: 'CSTP1.FirstLogFilePath', value: '/home/cstp/imixapp/IMIXCSTP/Log/cstp.log'}
+Property:
+    cstp_config:
+         -  {key: 'M_APPROOT', value: '/home/cstp/disk3/CSTP_TRADEDATA'}
+    hibernate:
+         -  {key: 'hibernate.connection.url', value: 'jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=199.31.178.46)(PORT=1521))(CONNECT_DATA=(SERVER=dedicated)(SERVICE_NAME=RMBTBDB)))'}
+         -  {key: 'hibernate.connection.serverid', value: 'RMBTBDB'}
+         -  {key: 'hibernate.connection.username', value: 'cstp'}
+#         -  {key: 'hibernate.connection.password', value: "{{CSTPDBpassword}}"}
+
+    jdbc_druid_rmb:
+         -  {key: 'cwap.ds.rmbtb.driver_class', value: 'oracle.jdbc.driver.OracleDriver'}
+         -  {key: 'cwap.ds.rmbtb.url', value: 'jdbc:oracle:thin:@(DESCRIPTION=(LOAD_BALANCE=yes)(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=199.31.178.46)(PORT=1521))(ADDRESS=(PROTOCOL=TCP)(HOST=199.31.178.46)(PORT=1521)))(CONNECT_DATA=(SERVER=dedicated)(SERVICE_NAME=rmbtbdb)))'}
+         -  {key: 'cwap.ds.rmbtb.encrypt', value: 'true'}
+#         -  {key: 'cwap.ds.rmbtb.username', value: "{{CSTP_OF_encrypt}}"}
+#         -  {key: 'cwap.ds.rmbtb.password', value: "{{CSTP_OF_encrypt_pass}}"}
+    rmi:
+         -  {key: 'ip', value: '199.31.177.80'}
+         -  {key: 'port', value: '9527'}
+         -  {key: 'prepare_ip', value: '199.31.177.81'}
+         -  {key: 'prepare_port', value: '9527'}
+         -  {key: 'wsIP', value: '199.31.177.80'}
+         -  {key: 'wsPORT', value: '8089'}
+         -  {key: 'prepare_wsIP', value: '199.31.177.81'}
+         -  {key: 'prepare_wsPORT', value: '8089'}
+    tradeload:
+         -  {key: 'hibernate.dialect', value: 'org.hibernate.dialect.OracleDialect'}
+         -  {key: 'hibernate.connection.driver_class', value: 'oracle.jdbc.driver.OracleDriver'}
+         -  {key: 'hibernate.connection.url', value: 'jdbc:oracle:thin:@199.31.178.46:1521:RMBTBDB'}
+         -  {key: 'hibernate.connection.username', value: 'cstp'}
+#         -  {key: 'hibernate.connection.password', value: "{{CSTPDBpassword}}"}
+         -  {key: 'hibernate.connection.serverid', value: 'RMBTBDB'}
+    tradeload_ftp:
+         -  {key: 'ftpIP', value: '199.31.176.76'}
+         -  {key: 'ftpPort', value: '1250'}
+         -  {key: 'prepare_ftpIP', value: '199.31.176.77'}
+         -  {key: 'prepare_ftpPort', value: '1250'}
+    

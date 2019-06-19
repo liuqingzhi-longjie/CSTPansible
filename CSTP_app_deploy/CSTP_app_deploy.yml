@@ -1,0 +1,25 @@
+- hosts: all
+  any_errors_fatal: true
+
+  pre_tasks:
+
+  roles:
+    - {role: check_env , tags: ['check_env'] }
+    - {role: upload_files , tags: ['upload_files']}
+#    - {role: backupDB , tags: ['backupDB']}
+#    - {role: updateDB , tags: ['updateDB'}
+#    - {role: MachineMonitorAgent , tags: ['MachineMonitorAgent']}
+#    - {role: Property , tags: ['update_Property']}
+#    - {role: CSTP , tags: ['update_CSTP']}
+#    - {role: BCCL , tags: ['update_BCCL']}
+#    - {role: CSTPReport , tags: ['update_CSTPReport']}
+#    - {role: EXCHANGEReport , tags: ['update_EXCHANGEReport']}
+#    - {role: CSTP_PROCESSOR , tags: ['update_CSTP_PROCESSOR']}
+#    - {role: CSTP_Download_Server , tags: ['update_CSTP_Download_Server']}
+#    - {role: IMIXCSTP , tags: ['update_IMIXCSTP']}
+    - {role: CSTP_dp_ds , tags: ['update_CSTP_dp_ds']}
+    - {role: CSTP_dp_dsbccl , tags: ['update_CSTP_dp_dsbccl']}
+#    - {role: CSTP_dp_emergency , tags: ['update_CSTP_dp_emergency']}
+    - {role: CSTP_dp_cbt , tags: ['update_CSTP_dp_cbt']}
+    - {role: CSTP_dp_hub , tags: ['update_CSTP_dp_hub']}
+    - {role: CSTP_dp_irs , tags: ['update_CSTP_dp_irs']}

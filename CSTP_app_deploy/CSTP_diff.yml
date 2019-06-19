@@ -1,0 +1,334 @@
+- hosts: 127.0.0.1
+  vars:
+    version_dir: 
+    jobs_WS:
+
+  tasks:
+
+    - name: clear CSTP_upgrade
+      file:
+        path: "{{item}}"
+        state: absent
+      with_items:
+          - "{{version_dir}}/Report"
+          - "{{version_dir}}/Server"
+          - "{{version_dir}}/imixapp"
+
+
+
+    - name: create CSTP_upgrade
+      file:
+        path: "{{version_dir}}"
+        state: directory
+
+    - name: read  gitdiff file
+      shell: |
+         cat {{jobs_WS}}/file_diff  |grep -v grep
+      register: DIFF_CONGIG
+      connection: local
+      run_once: true
+      ignore_errors: true
+
+
+
+    - name: get CSTP_REPORT
+      block:
+        - name: mdkir CSTP_REPORT dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/Report/CSTPReport/Log"
+        - name: copy CSTP_REPORT app
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/Report/CSTPReport/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/CSTP_REPORT/dist/" -maxdepth 2 -type d -name "lib" 
+            - find "{{jobs_WS}}/CSTP_REPORT/dist/" -maxdepth 2 -type d -name "cfg" 
+            - find "{{jobs_WS}}/CSTP_REPORT/dist/" -maxdepth 2 -type d -name "bin" 
+            - find "{{jobs_WS}}/CSTP_REPORT/dist/" -maxdepth 2 -type f -name "app.sh" 
+            - find "{{jobs_WS}}/CSTP_REPORT/dist/" -maxdepth 2 -type f -name "run.bat" 
+
+      when: (DIFF_CONGIG.stdout.find("CSTP_REPORT/") != -1  ) 
+
+
+
+    - name: get CSTP_Web_Manager
+      block:
+        - name: mdkir CSTP_Web_Manager dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/Server/ApacheTomcat7_CSTP/webapps"
+        - name: copy CSTP_Web_Manager app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+            mode: 0755
+          with_items:
+            - {A: "{{jobs_WS}}/CSTP_Web_Manager/CSTP_Web_Manager.war",B: "{{version_dir}}/Server/ApacheTomcat7_CSTP/webapps/"}
+
+      when: (DIFF_CONGIG.stdout.find("CSTP_Web_Manager/") != -1 )
+
+
+
+
+    - name: get CSTP_Web_Manager_BCCL
+      block:
+        - name: mdkir CSTP_Web_Manager_BCCL dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/Server/ApacheTomcat7_BCCL/webapps"
+        - name: copy CSTP_Web_Manager_BCCL app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+            mode: 0755
+          with_items:
+            - {A: "{{jobs_WS}}/CSTP_Web_Manager_BCCL/CSTP_Web_Manager_BCCL.war",B: "{{version_dir}}/Server/ApacheTomcat7_BCCL/webapps/"}
+
+      when: (DIFF_CONGIG.stdout.find("CSTP_Web_Manager_BCCL/") != -1 )
+
+
+
+    - name: get CSTP_Download_Server
+      block:
+        - name: mdkir CSTP_Download_Server dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/imixapp/CSTP_Download_Server/Log"
+
+        - name: copy CSTP_Download_Server app
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/imixapp/CSTP_Download_Server/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/CSTP_Download_Server/dist/" -maxdepth 2 -type d -name "lib" 
+            - find "{{jobs_WS}}/CSTP_Download_Server/dist/" -maxdepth 2 -type d -name "cfg" 
+            - find "{{jobs_WS}}/CSTP_Download_Server/dist/" -maxdepth 2 -type d -name "log" 
+            - find "{{jobs_WS}}/CSTP_Download_Server/dist/" -maxdepth 2 -type f -name "cstp.sh" 
+            - find "{{jobs_WS}}/CSTP_Download_Server/dist/" -maxdepth 2 -type f -name "app.sh" 
+            - find "{{jobs_WS}}/CSTP_Download_Server/dist/" -maxdepth 2 -type f -name "run.bat" 
+
+      when: DIFF_CONGIG.stdout.find("CSTP_Download_Server/") != -1  
+
+
+
+    - name: get CSTP_PROCESSOR
+      block:
+        - name: mdkir CSTP_PROCESSOR dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/imixapp/CSTP_PROCESSOR/lib"
+              - "{{version_dir}}/imixapp/CSTP_PROCESSOR/Log"
+
+        - name: copy CSTP_PROCESSOR cstp-dp-processor app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+            mode: 0755
+          with_items:
+            - {A: "{{jobs_WS}}/CSTP_PROCESSOR/cstp-dp-processor/cstp-dp-processor-1.0.0.0.jar",B: "{{version_dir}}/imixapp/CSTP_PROCESSOR/lib/"}
+
+
+        - name: copy CSTP_PROCESSOR lib app
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/imixapp/CSTP_PROCESSOR/lib/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/CSTP_PROCESSOR/cstp-dp-processor/target/dependency/"  -type f -name "*.jar"
+
+        - name: copy CSTP_PROCESSOR cfg and scripts
+          copy:
+            src: "{{jobs_WS}}/CSTP_PROCESSOR/cstp-dp-processor/{{item}}"
+            dest: "{{version_dir}}/imixapp/CSTP_PROCESSOR/"
+            mode: 0755
+          with_items:
+            - cfg
+            - app.sh
+
+
+
+      when: DIFF_CONGIG.stdout.find("CSTP_PROCESSOR/") != -1 
+
+
+
+    - name: get EXCHANGE_REPORT
+      block:
+        - name: mdkir EXCHANGE_REPORT dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/Report/ExchangeReport/Log"
+
+        - name: copy EXCHANGE_REPORT app
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/Report/ExchangeReport/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/EXCHANGE_REPORT/dist/" -maxdepth 2 -type d -name "lib" 
+            - find "{{jobs_WS}}/EXCHANGE_REPORT/dist/" -maxdepth 2 -type d -name "cfg" 
+            - find "{{jobs_WS}}/EXCHANGE_REPORT/dist/" -maxdepth 2 -type f -name "app.sh" 
+            - find "{{jobs_WS}}/EXCHANGE_REPORT/dist/" -maxdepth 2 -type f -name "run.bat" 
+
+      when: DIFF_CONGIG.stdout.find("EXCHANGE_REPORT/") != -1    
+
+ 
+
+
+    - name: get IMIXCSTP
+      block:
+        - name: mdkir IMIXCSTP dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/imixapp/IMIXCSTP/lib"
+              - "{{version_dir}}/imixapp/IMIXCSTP/cfg"
+              - "{{version_dir}}/imixapp/IMIXCSTP/Log"
+           
+        - name: copy IMIXCSTP app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+            mode: 0755
+          with_items:
+            - {A: "{{jobs_WS}}/IMIXCSTP/dist/cstp.jar",B: "{{version_dir}}/imixapp/IMIXCSTP/lib/"}
+
+        - name: copy IMIXCSTP cfg
+          copy:
+            src: "{{jobs_WS}}/IMIXCSTP/{{item}}"
+            dest: "{{version_dir}}/imixapp/IMIXCSTP/"
+            mode: 0755
+          with_items:
+            - cfg
+            - lib
+            - app.sh
+            - cstp.sh
+            - CSTP_SERVER.bat
+
+        - name: copy IMIXCSTP_PROCESSER app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+            mode: 0755
+          with_items:
+            - {A: "{{jobs_WS}}/IMIXCSTP_PROCESSER/dist/imixcstp_processer.jar",B: "{{version_dir}}/imixapp/IMIXCSTP/lib/"}
+
+
+        - name: copy IMIXCSTP_PROCESSER lib
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+            mode: 0755
+          with_items:
+            - {A: "{{jobs_WS}}/IMIXCSTP_PROCESSER/lib",B: "{{version_dir}}/imixapp/IMIXCSTP/"}
+
+
+        - name: copy IMIXCSTP_Dependencies cstp-dp-processor app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+            mode: 0755
+          with_items:
+            - {A: "{{jobs_WS}}/IMIXCSTP_Dependencies/cstp-dp-processor/cstp-dp-processor-1.0.0.0.jar",B: "{{version_dir}}/imixapp/IMIXCSTP/lib/"}
+
+
+        - name: copy IMIXCSTP_Dependencies app
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/imixapp/IMIXCSTP/lib/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/IMIXCSTP_Dependencies/cstp-dp-processor/target/dependency/"  -type f -name "*.jar"
+
+        - name: copy IMIXCSTP_Dependencies cfg
+          copy:
+            src: "{{jobs_WS}}/IMIXCSTP_Dependencies/cstp-dp-processor/cfg/{{item}}"
+            dest: "{{version_dir}}/imixapp/IMIXCSTP/cfg/"
+            mode: 0755
+          with_items:
+            - cwap-context.properties
+            - imt_application.cfg
+
+      when: (DIFF_CONGIG.stdout.find("IMIXCSTP/") != -1 )
+ 
+
+
+    - name: get tradeload
+      block:
+        - name: mdkir tradeload dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/Server/ApacheTomcat7_CSTP/webapps_webserver"
+        - name: copy tradeload app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+          with_items:
+            - {A: "{{jobs_WS}}/tradeload/tradeload.war",B: "{{version_dir}}/Server/ApacheTomcat7_CSTP/webapps_webserver/"}
+       
+      when: DIFF_CONGIG.stdout.find("tradeload/") != -1 
+
+
+    - name: get tradeload_bccl
+      block:
+        - name: mdkir tradeload_bccl dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/Server/ApacheTomcat7_BCCL/webapps_webserver"
+        - name: copy tradeload_bccl app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+          with_items:
+            - {A: "{{jobs_WS}}/tradeload_bccl/tradeload_bccl.war",B: "{{version_dir}}/Server/ApacheTomcat7_BCCL/webapps_webserver/"}
+       
+      when: DIFF_CONGIG.stdout.find("tradeload_bccl/") != -1 
+
+
+    - name: get database
+      block:
+        - name: check database dir
+          stat:
+            path: "{{jobs_WS}}/DATABASE/{{version}}"
+          register: db_file
+
+        - name: rm old database dir
+          file:
+            path: "{{version_dir}}/DATABASE"
+            state: absent
+
+        - name: mdkir database dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/DATABASE"
+          when: db_file.stat.exists
+
+        - name: copy database dir
+          copy:
+            src: "{{jobs_WS}}/DATABASE/{{version}}"
+            dest: "{{version_dir}}/DATABASE/"
+          when: db_file.stat.exists
+
+
+

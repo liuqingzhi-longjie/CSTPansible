@@ -1,0 +1,23 @@
+---
+- name: rm old version file
+  file:
+    path: "{{version_dir}}"
+    state: absent
+
+- name: create new deploy version directory
+  file:
+    path: "{{version_dir}}"
+    state: directory
+        
+
+- name: copy  {{version}}.tgz
+  unarchive:
+    src:  ~/artifacts/CSTP_upgrade/CSTP_{{version}}.tgz
+    dest:  "{{version_dir}}/"
+
+- name: check and unarchive {{version}}.tgz md5
+  shell: |
+    md5sum -c {{version}}.md5
+    tar -xf {{version}}.tgz
+  args:
+    chdir:  "{{version_dir}}/"

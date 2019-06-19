@@ -1,0 +1,94 @@
+---
+- name: check new application file
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  register: new_application_status
+
+- name: read new application file
+  shell: |
+      cat "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"  |grep -v grep
+  register: new_application_file
+  when: new_application_status.stat.exists
+
+
+- name: clear new application
+  block:
+    - name: stop cstp-dp-hub services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh stop
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-hub/bin/"
+      ignore_errors: true
+      when: (new_application_file.stdout.find("cstp-dp-hub/") != -1  )
+    
+    
+    - name: delete cstp-dp-hub directory
+      file:
+        path: "{{ansible_env.HOME}}/app/cstp-dp-hub"
+        state: absent
+      when: (new_application_file.stdout.find("cstp-dp-hub/") != -1  )
+  when: new_application_status.stat.exists
+
+- name: check cstp-dp-hub {{version}} backup
+  stat: 
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-hub.tgz"
+  register: cstp_dp_hub_backup
+
+- name: start rollback cstp-dp-hub
+  block:
+
+
+    - name: stop cstp-dp-hub services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh stop
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-hub/bin/"
+      ignore_errors: true
+    
+    
+        
+    - name: delete cstp-dp-hub directory
+      shell: |
+        find {{ansible_env.HOME}}/app/cstp-dp-hub/*  -maxdepth 0  ! -path '{{ansible_env.HOME}}/app/cstp-dp-hub/logs*'  -exec     rm -rf {} \;
+      ignore_errors: true
+
+
+    
+    
+    
+    - name: rollback cstp-dp-hub app
+      unarchive:
+        src: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/cstp-dp-hub.tgz"
+        dest: "{{ansible_env.HOME}}/app/"
+        remote_src: yes
+        mode: 0755
+
+    
+    
+    - name: start cstp-dp-hub services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./app.sh start
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/app/cstp-dp-hub/bin/"
+    
+    - name: wait service start
+      wait_for:
+        timeout: 10
+    
+    - name: check cstp-dp-hub services
+      shell: |
+        ps -ef | grep RMBCSTP_HUB
+      register: cstp_dp_hub_services
+    
+    - name: show cstp-dp-hub services status
+      debug:
+        msg: "{{cstp_dp_hub_services.stdout_lines}}"
+    
+    
+  when: cstp_dp_hub_backup.stat.exists

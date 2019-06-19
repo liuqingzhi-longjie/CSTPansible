@@ -1,0 +1,9 @@
+---
+- name: check update DB file 
+  stat: 
+    path: "{{version_dir}}/DATABASE/{{version}}"
+  register: updateDB_file
+  connection: local
+
+- import_tasks: update_DB.yml
+  when: (updateDB_file.stat.exists) and (inventory_hostname in groups['DB'])

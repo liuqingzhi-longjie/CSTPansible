@@ -1,0 +1,81 @@
+---
+- name: create {{version}}  backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+    state: directory
+
+
+
+- name: stop ApacheTomcat7_CSTP services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./shutdown.sh
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP/bin/"
+  ignore_errors: true
+
+
+- name: check ApacheTomcat7_CSTP app
+  stat:
+    path: "{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP"
+  register: cstp_status
+
+
+- name: check ApacheTomcat7_CSTP backup
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_CSTP_{{version}}"
+  register: cstp_backup_status
+
+
+- name: backup ApacheTomcat7_CSTP
+  shell: |
+
+    tar -czf {{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_CSTP.tgz  ApacheTomcat7_CSTP --exclude=ApacheTomcat7_CSTP/logs/*.log --exclude=ApacheTomcat7_CSTP/logs/*.txt
+    touch {{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_CSTP_{{version}}
+  args:
+    chdir: "{{ansible_env.HOME}}/Server/"
+  when: (cstp_status.stat.exists) and (cstp_backup_status.stat.exists == False)
+
+
+
+- name: save new app name
+  shell: |
+    echo -e "ApacheTomcat7_CSTP/ \n" >> "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  when: cstp_status.stat.exists == False
+
+- name: create ApacheTomcat7_CSTP directory
+  file:
+    path: "{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP"
+    state: directory
+
+
+- name: update ApacheTomcat7_CSTP app
+  shell: |
+    cp -r  {{version_dir}}/{{version}}/Server/ApacheTomcat7_CSTP  {{ansible_env.HOME}}/Server/
+
+
+
+
+- name: start ApacheTomcat7_CSTP services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./startup.sh
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP/bin/"
+
+- name: wait service start
+  wait_for:
+    timeout: 10
+
+- name: check ApacheTomcat7_CSTP services
+  shell: |
+    ps -ef | grep ApacheTomcat7_CSTP |grep -iv grep 
+  register: CSTP_services
+
+- name: show ApacheTomcat7_CSTP services status
+  debug:
+    msg: "{{CSTP_services.stdout_lines}}"
+
+

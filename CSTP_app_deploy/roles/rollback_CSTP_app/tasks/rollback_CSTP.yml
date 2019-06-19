@@ -1,0 +1,93 @@
+---
+- name: check new application file
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  register: new_application_status
+
+- name: read new application file
+  shell: |
+      cat "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"  |grep -v grep
+  register: new_application_file
+  when: new_application_status.stat.exists
+
+
+- name: clear new application
+  block:
+    - name: stop CSTP services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./shutdown.sh
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP/bin/"
+      ignore_errors: true
+      when: (new_application_file.stdout.find("ApacheTomcat7_CSTP/") != -1  )
+    
+
+    - name: delete ApacheTomcat7_CSTP directory
+      file:
+        path: "{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP"
+        state: absent
+      when: (new_application_file.stdout.find("ApacheTomcat7_CSTP/") != -1  )
+  when: new_application_status.stat.exists
+
+- name: check ApacheTomcat7_CSTP {{version}} backup
+  stat: 
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_CSTP.tgz"
+  register: CSTP_backup
+
+- name: start rollback ApacheTomcat7_CSTP
+  block:
+    - name: stop CSTP services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./shutdown.sh
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP/bin/"
+      ignore_errors: true
+    
+
+    
+    - name: delete ApacheTomcat7_CSTP directory
+      shell: |
+        find {{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP/*  -maxdepth 0  ! -path '{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP/logs*'  -exec     rm -rf {} \;
+      ignore_errors: true
+
+    
+    
+    
+    - name: rollback ApacheTomcat7_CSTP app
+      unarchive:
+        src: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/ApacheTomcat7_CSTP.tgz"
+        dest: "{{ansible_env.HOME}}/Server/"
+        remote_src: yes
+        mode: 0755
+
+
+
+    - name: start CSTP services
+      shell: |
+        source ~/.bash_profile;
+        set -m; ./startup.sh
+      args:
+        chdir:
+          "{{ansible_env.HOME}}/Server/ApacheTomcat7_CSTP/bin/"
+    
+    - name: wait service start
+      wait_for:
+        timeout: 10
+    
+    - name: check CSTP services
+      shell: |
+        ps -ef | grep ApacheTomcat7_CSTP
+      register: CSTP_services
+    
+    - name: show CSTP services status
+      debug:
+        msg: "{{CSTP_services.stdout_lines}}"
+    
+    
+
+  when: CSTP_backup.stat.exists
+

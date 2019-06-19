@@ -1,0 +1,8 @@
+---
+- name: check deploy file 
+  stat: 
+    path: "{{version_dir}}/Report/EXCHANGEReport"
+  register: EXCHANGEReport_file
+
+- import_tasks: update_EXCHANGEReport.yml
+  when: (EXCHANGEReport_file.stat.exists) and (inventory_hostname in groups['EXCHANGE_REPORT'])

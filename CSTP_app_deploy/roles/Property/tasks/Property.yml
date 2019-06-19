@@ -1,0 +1,89 @@
+---
+- name: update Property cstp_config config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/cstp_config.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{Property.cstp_config}}"
+
+
+- name: update Property hibernate config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/hibernate.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{Property.hibernate}}"
+
+- name: update Property hibernate CSTPDBpassword config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/hibernate.properties"
+    regexp: "^hibernate.connection.password.*"
+    replace: "hibernate.connection.password={{CSTPDBpassword}}"
+
+
+- name: update Property jdbc_druid_rmb config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/jdbc_druid_rmb.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{Property.jdbc_druid_rmb}}"
+
+
+- name: update Property jdbc_druid_rmb CSTP_OF_encrypt config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/jdbc_druid_rmb.properties"
+    regexp: "^cwap.ds.rmbtb.username.*"
+    replace: "cwap.ds.rmbtb.username={{CSTP_OF_encrypt}}"
+
+
+
+- name: update Property jdbc_druid_rmb CSTP_OF_encrypt_pass config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/jdbc_druid_rmb.properties"
+    regexp: "^cwap.ds.rmbtb.password.*"
+    replace: "cwap.ds.rmbtb.password={{CSTP_OF_encrypt_pass}}"
+
+
+
+- name: update Property rmi config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/rmi.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{Property.rmi}}"
+
+
+- name: update Property tradeload config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/tradeload.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{Property.tradeload}}"
+
+
+- name: update Property tradeload CSTPDBpassword config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/tradeload.properties"
+    regexp: "^hibernate.connection.password.*"
+    replace: "hibernate.connection.password={{CSTPDBpassword}}"
+
+
+- name: update Property tradeload_ftp config
+  replace:
+    path: "{{ansible_env.HOME}}/Property/tradeload_ftp.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{Property.tradeload_ftp}}"
+
+
+- name: unix2dos config
+  shell: |
+     unix2dos ./*
+  args:
+    chdir:  "{{ansible_env.HOME}}/Property/"

@@ -1,0 +1,62 @@
+---
+- name: check backup dir 
+  stat: 
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+  register: backup_dir
+
+- name: show check backup dir status
+  fail:
+    msg: "There is no {{version}} backup !"
+  when: backup_dir.stat.exists == False
+
+
+- import_tasks: rollback_CSTP.yml
+  when: (inventory_hostname in groups['CSTP'])
+
+
+- import_tasks: rollback_BCCL.yml
+  when: (inventory_hostname in groups['BCCL'])
+
+- import_tasks: rollback_CSTP_Download_Server.yml
+  when: (inventory_hostname in groups['CSTP_DOWNLOAD_SERVER'])
+
+- import_tasks: rollback_CSTP_PROCESSOR.yml
+  when: (inventory_hostname in groups['CSTP_PROCESSOR'])
+
+
+- import_tasks: rollback_CSTPReport.yml
+  when: (inventory_hostname in groups['CSTP_REPORT'])
+
+
+- import_tasks: rollback_EXCHANGEReport.yml
+  when: (inventory_hostname in groups['EXCHANGE_REPORT'])
+
+
+- import_tasks: rollback_IMIXCSTP.yml
+  when: (inventory_hostname in groups['IMIXCSTP'])
+
+
+- import_tasks: rollback_CSTP_dp_ds.yml
+  when: (inventory_hostname in groups['CSTP_DP_DS'])
+
+
+- import_tasks: rollback_CSTP_dp_dsbccl.yml
+  when: (inventory_hostname in groups['CSTP_DP_DSBCCL'])
+
+
+- import_tasks: rollback_CSTP_dp_emergency.yml
+  when: (inventory_hostname in groups['CSTP_DP_EMERGENCY'])
+
+
+- import_tasks: rollback_CSTP_dp_hub.yml
+  when: (inventory_hostname in groups['CSTP_DP_HUB'])
+
+
+- import_tasks: rollback_CSTP_dp_irs.yml
+  when: (inventory_hostname in groups['CSTP_DP_IRS'])
+
+
+- import_tasks: rollback_CSTP_dp_cbt.yml
+  when: (inventory_hostname in groups['CSTP_DP_CBT'])
+
+

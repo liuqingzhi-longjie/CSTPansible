@@ -1,0 +1,8 @@
+---
+- name: check deploy file 
+  stat: 
+    path: "{{version_dir}}/{{version}}/imixapp/CSTP_Download_Server"
+  register: CSTP_Download_Server_file
+
+- import_tasks: update_CSTP_Download_Server.yml
+  when: (CSTP_Download_Server_file.stat.exists) and (inventory_hostname in groups['CSTP_DOWNLOAD_SERVER'])

@@ -1,0 +1,3 @@
+---
+- import_tasks: backup_DB.yml
+  when: (inventory_hostname in groups['DB'])

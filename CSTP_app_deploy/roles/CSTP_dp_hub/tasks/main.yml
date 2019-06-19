@@ -1,0 +1,8 @@
+---
+- name: check deploy file 
+  stat: 
+    path: "{{version_dir}}/{{version}}/app/cstp-dp-hub"
+  register: cstp_dp_hub_file
+
+- import_tasks: update_cstp_dp_hub.yml
+  when: (cstp_dp_hub_file.stat.exists) and (inventory_hostname in groups['CSTP_DP_HUB'])

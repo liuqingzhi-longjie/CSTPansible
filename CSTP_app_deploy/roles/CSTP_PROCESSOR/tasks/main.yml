@@ -1,0 +1,8 @@
+---
+- name: check deploy file 
+  stat: 
+    path: "{{version_dir}}/{{version}}/imixapp/CSTP_PROCESSOR"
+  register: CSTP_PROCESSOR_file
+
+- import_tasks: update_CSTP_PROCESSOR.yml
+  when: (CSTP_PROCESSOR_file.stat.exists) and (inventory_hostname in groups['CSTP_PROCESSOR'])

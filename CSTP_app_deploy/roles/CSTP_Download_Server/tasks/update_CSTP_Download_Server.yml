@@ -1,0 +1,138 @@
+---
+- name: create {{version}}  backup directory
+  file:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}"
+    state: directory
+
+
+- name: stop CSTP_Download_Server services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh stop
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/"
+  ignore_errors: true
+
+
+- name: check CSTP_Download_Server app
+  stat:
+    path: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server"
+  register: cstp_download_status
+
+- name: check CSTP_Download_Server backup
+  stat:
+    path: "{{ansible_env.HOME}}/upgrade/backup/{{version}}/CSTP_Download_Server_{{version}}"
+  register: cstp_download_backup_status
+
+
+- name: backup CSTP_Download_Server
+  shell: |
+
+    tar -czf {{ansible_env.HOME}}/upgrade/backup/{{version}}/CSTP_Download_Server.tgz  CSTP_Download_Server --exclude=CSTP_Download_Server/Log/*
+    touch {{ansible_env.HOME}}/upgrade/backup/{{version}}/CSTP_Download_Server_{{version}}
+  args:
+    chdir: "{{ansible_env.HOME}}/imixapp/"
+  when: (cstp_download_status.stat.exists) and (cstp_download_backup_status.stat.exists == False)
+
+- name: save new app name
+  shell: |
+    echo -e "CSTP_Download_Server/ \n" >> "{{ansible_env.HOME}}/upgrade/backup/{{version}}/new_application"
+  when: cstp_download_status.stat.exists == False
+
+- name: create cstp_download_status directory
+  file:
+    path: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server"
+    state: directory
+
+
+- name: rm CSTP_DOWNLOAD_SERVER old file
+  file:
+    path: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/{{item}}"
+    state: absent
+  with_items:
+      - cfg
+      - lib
+
+
+- name: update CSTP_Download_Server app
+  shell: |
+    cp -r  {{version_dir}}/{{version}}/imixapp/CSTP_Download_Server  {{ansible_env.HOME}}/imixapp/
+
+    
+
+- name: update CSTP_Download_Server downloadServerRMI.properties config
+  replace:
+    path: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/cfg/downloadServerRMI.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{CSTP_Download_Server_conf.downloadServerRMI}}"
+
+
+- name: update CSTP_Download_Server hibernate.properties config
+  replace:
+    path: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/cfg/hibernate.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{CSTP_Download_Server_conf.hibernate}}"
+
+
+- name: update CSTP_Download_Server hibernate.properties CSTPDBpassword config
+  lineinfile:
+    path: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/cfg/hibernate.properties"
+    insertafter: '^hibernate.connection.username.*'
+    regexp: "^hibernate.connection.password.*"
+    line: "hibernate.connection.password={{CSTPDBpassword}}"
+
+
+- name: update CSTP_Download_Server InstInfo.properties config
+  replace:
+    path: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/cfg/InstInfo.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{CSTP_Download_Server_conf.InstInfo}}"
+
+- name: update CSTP_Download_Server jmxserver_config.properties config
+  replace:
+    path: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/cfg/jmxserver_config.properties"
+    regexp: "^{{item.key}}.*"
+    replace: "{{item.key}}={{item.value}}"
+  with_items:
+      - "{{CSTP_Download_Server_conf.jmxserver_config}}"
+
+- name: unix2dos config
+  shell: |
+     unix2dos ./*
+  args:
+    chdir: "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/cfg/"
+
+- name: start CSTP_Download_Server services
+  shell: |
+    source ~/.bash_profile;
+    set -m; ./app.sh start
+  args:
+    chdir:
+      "{{ansible_env.HOME}}/imixapp/CSTP_Download_Server/"
+  when: slave == 'master'
+
+- name: wait service start
+  wait_for:
+    timeout: 10
+  when: slave == 'master'
+
+- name: check CSTP_Download_Server services
+  shell: |
+    ps -ef | grep CSTP_IMIX_PTRD |grep -iv grep 
+  register: CSTP_Download_Server_services
+  when: slave == 'master'
+
+- name: show CSTP_Download_Server services status
+  debug:
+    msg: "{{CSTP_Download_Server_services.stdout_lines}}"
+  when: slave == 'master'
+
+
+

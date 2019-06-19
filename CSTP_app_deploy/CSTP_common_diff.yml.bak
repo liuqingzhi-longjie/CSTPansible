@@ -1,0 +1,153 @@
+- hosts: 127.0.0.1
+  vars:
+    version_dir: 
+    jobs_WS:
+
+  tasks:
+
+    - name: clear CSTP_upgrade/app app-web
+      file:
+        path: "{{item}}"
+        state: absent
+      with_items:
+          - "{{version_dir}}/app"
+          - "{{version_dir}}/app-web"
+
+
+    - name: read  gitdiff file
+      shell: |
+         cat {{jobs_WS}}/file_diff  |grep -v grep
+      register: DIFF_CONGIG
+      connection: local
+      run_once: true
+      ignore_errors: true
+
+
+    - name: get common cstp-processor
+      block:
+        - name: mdkir cstp-processor dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/app/cstp-dp-ds/lib"
+              - "{{version_dir}}/app/cstp-dp-dsbccl/lib"
+              - "{{version_dir}}/app/cstp-dp-ds/logs"
+              - "{{version_dir}}/app/cstp-dp-dsbccl/logs"
+
+        - name: copy cstp-processor cstp-dp-processor app to cstp-dp-ds
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/app/cstp-dp-ds/lib/"
+          with_lines:
+            - find "{{jobs_WS}}/cstp-processor/cstp-dp-processor/target/dependency/"  -type f -name "*.jar"
+
+
+        - name: copy cstp-processor cstp-dp-processor app to cstp-dp-dsbccl
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/app/cstp-dp-dsbccl/lib/"
+          with_lines:
+            - find "{{jobs_WS}}/cstp-processor/cstp-dp-processor/target/dependency/"  -type f -name "*.jar"
+
+
+              
+        - name: mdkir cstp-processor cnf dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/app/cstp-dp-dsbccl/conf"
+              - "{{version_dir}}/app/cstp-dp-ds/conf"
+
+        - name: copy rmbcstp_bccl_ds conf
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/app/cstp-dp-dsbccl/conf/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/cstp-processor/cstp-dp-processor/conf/rmbcstp_bccl_ds/" 
+    
+
+        - name: copy rmbcstp_bccl_ds scripts
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/app/cstp-dp-dsbccl/bin/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/cstp-processor/cstp-dp-processor/scripts/rmbcstp_bccl_ds/" 
+
+
+
+        - name: copy rmbcstp_ds conf
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/app/cstp-dp-ds/conf/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/cstp-processor/cstp-dp-processor/conf/rmbcstp_ds/" 
+
+
+        - name: copy rmbcstp_ds scripts
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/app/cstp-dp-ds/bin/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/cstp-processor/cstp-dp-processor/scripts/rmbcstp_ds/" 
+
+
+        - name: mdkir cstp-processor shell scripts dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/app/cstp-dp-dsbccl/bin"
+              - "{{version_dir}}/app/cstp-dp-ds/bin"
+     
+
+
+      when: (DIFF_CONGIG.stdout.find("cstp-processor/") != -1 ) or (DIFF_CONGIG.stdout.find("cstp-common/") != -1 )
+
+
+
+
+
+    - name: get cstp-web
+      block:
+        - name: mdkir cstp-web dir
+          file:
+            path: "{{item}}"
+            state: directory
+          with_items:
+              - "{{version_dir}}/app-web/cstp-dp-emergency/lib"
+              - "{{version_dir}}/app-web/cstp-dp-emergency/conf"
+
+        - name: copy cstp-web app
+          copy:
+            src: "{{item.A}}"
+            dest: "{{item.B}}"
+          with_items:
+            - {A: "{{jobs_WS}}/cstp-web/cstp-dp-web/cstp-dp-web-1.0.0.0.jar",B: "{{version_dir}}/app-web/cstp-dp-emergency/lib/"}
+       
+        - name: copy cstp-web lib app
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/app-web/cstp-dp-emergency/lib/"
+          with_lines:
+            - find "{{jobs_WS}}/cstp-web/cstp-dp-web/target/dependency/"  -type f -name "*.jar"
+
+
+        - name: copy cstp-dp-web conf
+          copy:
+            src: "{{item}}"
+            dest: "{{version_dir}}/app-web/cstp-dp-emergency/conf/"
+            mode: 0755
+          with_lines:
+            - find "{{jobs_WS}}/cstp-web/cstp-dp-web/conf/rmbcstp_emergency/" 
+            
+            
+
+
+      when: (DIFF_CONGIG.stdout.find("cstp-web/") != -1 ) or (DIFF_CONGIG.stdout.find("cstp-common/") != -1 )
+
